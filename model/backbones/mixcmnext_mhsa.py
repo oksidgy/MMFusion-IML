@@ -5,13 +5,13 @@ in August 2023 @ ITI-CERTH
 import torch
 from torch import nn, Tensor
 from torch.nn import functional as F
-from models.layers import DropPath
+from model.layers import DropPath
 import functools
 from functools import partial
-from models.modules.ffm import FeatureFusionModule as FFM
-from models.modules.ffm import FeatureRectifyModule as FRM
-from models.modules.ffm import ChannelEmbed
-from common.utils import nchw_to_nlc, nlc_to_nchw
+from model.modules.ffm import FeatureFusionModule as FFM
+from model.modules.ffm import FeatureRectifyModule as FRM
+from model.layers.early_conv import ModalMixer
+from model.modules.ffm import ChannelEmbed
 
 
 class Attention(nn.Module):
@@ -149,22 +149,7 @@ class ChannelProcessing(nn.Module):
         return x
 
 
-class PredictorConv(nn.Module):
-    def __init__(self, embed_dim=384, num_modals=4):
-        super().__init__()
-        self.num_modals = num_modals
-        self.score_nets = nn.ModuleList([nn.Sequential(
-            nn.Conv2d(embed_dim, embed_dim, 3, 1, 1, groups=(embed_dim)),
-            nn.Conv2d(embed_dim, 1, 1),
-            nn.Sigmoid()
-        ) for _ in range(num_modals)])
 
-    def forward(self, x):
-        B, C, H, W = x[0].shape
-        x_ = [torch.zeros((B, 1, H, W)) for _ in range(self.num_modals)]
-        for i in range(self.num_modals):
-            x_[i] = self.score_nets[i](x[i])
-        return x_
 
 
 class ModuleParallel(nn.Module):
@@ -215,7 +200,7 @@ cmnext_settings = {
 }
 
 
-class CMNeXtMHSA(nn.Module):
+class MixCMNeXtMHSA(nn.Module):
     def __init__(self, model_name: str = 'B0', modals: list = ['rgb', 'depth', 'event', 'lidar']):
         super().__init__()
         assert model_name in cmnext_settings.keys(), f"Model name should be in {list(cmnext_settings.keys())}"
@@ -233,14 +218,14 @@ class CMNeXtMHSA(nn.Module):
         self.patch_embed3 = PatchEmbed(embed_dims[1], embed_dims[2], 3, 2, 3 // 2)
         self.patch_embed4 = PatchEmbed(embed_dims[2], embed_dims[3], 3, 2, 3 // 2)
 
+
         if self.num_modals > 0:
             self.extra_downsample_layers = nn.ModuleList([
-                PatchEmbedParallel(3, embed_dims[0], 7, 4, 7 // 2, self.num_modals),
-                *[PatchEmbedParallel(embed_dims[i], embed_dims[i + 1], 3, 2, 3 // 2, self.num_modals) for i in range(3)]
+                PatchEmbedParallel(3, embed_dims[0], 7, 4, 7 // 2, 1),
+                *[PatchEmbedParallel(embed_dims[i], embed_dims[i + 1], 3, 2, 3 // 2, 1) for i in range(3)]
             ])
-        if self.num_modals > 1:
-            self.extra_score_predictor = nn.ModuleList(
-                [PredictorConv(embed_dims[i], self.num_modals) for i in range(len(depths))])
+        if len(modals) > 1:
+            self.modal_mix = ModalMixer(modals=self.modals)
 
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
 
@@ -285,13 +270,6 @@ class CMNeXtMHSA(nn.Module):
                 FFM(dim=embed_dims[2], reduction=1, num_heads=num_heads[2], norm_layer=nn.BatchNorm2d),
                 FFM(dim=embed_dims[3], reduction=1, num_heads=num_heads[3], norm_layer=nn.BatchNorm2d)])
 
-    def tokenselect(self, x_ext, module):
-        x_scores = module(x_ext)
-        for i in range(len(x_ext)):
-            x_ext[i] = x_scores[i] * x_ext[i] + x_ext[i]
-        x_f = functools.reduce(torch.max, x_ext)
-        return x_f
-
     def forward(self, x: list) -> list:
         x_cam = x[0]
         if self.num_modals > 0:
@@ -304,8 +282,9 @@ class CMNeXtMHSA(nn.Module):
             x_cam = blk(x_cam, H, W)
         x1_cam = self.norm1(x_cam).reshape(B, H, W, -1).permute(0, 3, 1, 2)
         if self.num_modals > 0:
+            x_ext = [self.modal_mix(x_ext)]
             x_ext, _, _ = self.extra_downsample_layers[0](x_ext)
-            x_f = self.tokenselect(x_ext, self.extra_score_predictor[0]) if self.num_modals > 1 else x_ext[0]
+            x_f = x_ext[0]
             x_f = x_f.flatten(-2).permute(0, 2, 1)
             for blk in self.extra_block1:
                 x_f = blk(x_f, H, W)
@@ -325,7 +304,7 @@ class CMNeXtMHSA(nn.Module):
         x2_cam = self.norm2(x_cam).reshape(B, H, W, -1).permute(0, 3, 1, 2)
         if self.num_modals > 0:
             x_ext, _, _ = self.extra_downsample_layers[1](x_ext)
-            x_f = self.tokenselect(x_ext, self.extra_score_predictor[1]) if self.num_modals > 1 else x_ext[0]
+            x_f = x_ext[0]
             x_f = x_f.flatten(-2).permute(0, 2, 1)
             for blk in self.extra_block2:
                 x_f = blk(x_f, H, W)
@@ -346,7 +325,7 @@ class CMNeXtMHSA(nn.Module):
         x3_cam = self.norm3(x_cam).reshape(B, H, W, -1).permute(0, 3, 1, 2)
         if self.num_modals > 0:
             x_ext, _, _ = self.extra_downsample_layers[2](x_ext)
-            x_f = self.tokenselect(x_ext, self.extra_score_predictor[2]) if self.num_modals > 1 else x_ext[0]
+            x_f = x_ext[0]
             x_f = x_f.flatten(-2).permute(0, 2, 1)
             for blk in self.extra_block3:
                 x_f = blk(x_f, H, W)
@@ -367,7 +346,7 @@ class CMNeXtMHSA(nn.Module):
         x4_cam = self.norm4(x_cam).reshape(B, H, W, -1).permute(0, 3, 1, 2)
         if self.num_modals > 0:
             x_ext, _, _ = self.extra_downsample_layers[3](x_ext)
-            x_f = self.tokenselect(x_ext, self.extra_score_predictor[3]) if self.num_modals > 1 else x_ext[0]
+            x_f = x_ext[0]
             x_f = x_f.flatten(-2).permute(0, 2, 1)
             for blk in self.extra_block4:
                 x_f = blk(x_f, H, W)
@@ -386,7 +365,7 @@ if __name__ == '__main__':
     modals = ['img', 'depth', 'event', 'lidar']
     x = [torch.zeros(1, 3, 1024, 1024), torch.ones(1, 3, 1024, 1024), torch.ones(1, 3, 1024, 1024) * 2,
          torch.ones(1, 3, 1024, 1024) * 3]
-    model = CMNeXtMHSA('B2', modals)
+    model = MixCMNeXtMHSA('B2', modals)
     outs = model(x)
     for y in outs:
         print(y.shape)

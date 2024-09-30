@@ -113,7 +113,7 @@ def computeDetectionMetrics(scores, labels):
     lbl = lbl[np.isfinite(scores)]
 
     scores = np.array(scores, dtype='float32')
-    scores[scores == np.PINF] = np.nanmax(scores[scores < np.PINF])
+    scores[scores == np.inf] = np.nanmax(scores[scores < np.inf])
     scores = scores[np.isfinite(scores)]
     assert lbl.shape == scores.shape
 

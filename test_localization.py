@@ -8,8 +8,8 @@ import torchvision.transforms.functional as TF
 
 from data.datasets import ManipulationDataset
 from common.metrics import computeLocalizationMetrics
-from models.cmnext_conf import CMNeXtWithConf
-from models.modal_extract import ModalitiesExtractor
+from model.cmnext_conf import CMNeXtWithConf
+from model.modal_extract import ModalitiesExtractor
 from configs.cmnext_init_cfg import _C as config, update_config
 
 parser = argparse.ArgumentParser(description='Test Localization')

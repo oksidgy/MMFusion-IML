@@ -8,17 +8,18 @@ import torchvision.transforms.functional as TF
 
 from data.datasets import ManipulationDataset
 from common.metrics import computeDetectionMetrics
-from models.cmnext_conf import CMNeXtWithConf
-from models.modal_extract import ModalitiesExtractor
+
+from model.cmnext_conf import CMNeXtWithConf
+from model.modal_extract import ModalitiesExtractor
 from configs.cmnext_init_cfg import _C as config, update_config
 
 parser = argparse.ArgumentParser(description='Test Detection')
-parser.add_argument('-gpu', '--gpu', type=int, default=0, help='device, use -1 for cpu')
+parser.add_argument('-gpu', '--gpu', type=int, default=-1, help='device, use -1 for cpu')
 parser.add_argument('-log', '--log', type=str, default='INFO', help='logging level')
-parser.add_argument('-exp', '--exp', type=str, default=None, help='Yaml experiment file')
-parser.add_argument('-ckpt', '--ckpt', type=str, default=None, help='Checkpoint')
-parser.add_argument('-manip', '--manip', type=str, default=None, help='Manip data file')
-parser.add_argument('-auth', '--auth', type=str, default=None, help='Auth data file')
+parser.add_argument('-exp', '--exp', type=str, default="./experiments/ec_example_phase2.yaml", help='Yaml experiment file')
+parser.add_argument('-ckpt', '--ckpt', type=str, default="./ckpt/early_fusion_detection.pth", help='Checkpoint')
+parser.add_argument('-manip', '--manip', type=str, default="./data/IDT-CocoGlide-manip.txt", help='Manip data file')
+parser.add_argument('-auth', '--auth', type=str, default="./data/IDT-CocoGlide-auth.txt", help='Auth data file')
 parser.add_argument('opts', help="other options", default=None, nargs=argparse.REMAINDER)
 
 args = parser.parse_args()
@@ -45,7 +46,7 @@ modal_extractor = ModalitiesExtractor(config.MODEL.MODALS[1:], config.MODEL.NP_W
 
 model = CMNeXtWithConf(config.MODEL)
 
-ckpt = torch.load(args.ckpt)
+ckpt = torch.load(args.ckpt, map_location="cpu")
 
 model.load_state_dict(ckpt['state_dict'])
 modal_extractor.load_state_dict(ckpt['extractor_state_dict'])

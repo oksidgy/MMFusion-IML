@@ -17,10 +17,10 @@ import torchvision.transforms.functional as TF
 
 from data.datasets import MixDataset
 from common.metrics import computeDetectionMetrics
-from models.cmnext_conf import CMNeXtWithConf
+from model.cmnext_conf import CMNeXtWithConf
 from common.split_params import group_weight
 from common.lr_schedule import WarmUpPolyLR
-from models.modal_extract import ModalitiesExtractor
+from model.modal_extract import ModalitiesExtractor
 from configs.cmnext_init_cfg import _C as config, update_config
 
 parser = argparse.ArgumentParser(description='')

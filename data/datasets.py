@@ -111,13 +111,23 @@ class ManipulationDataset(Dataset):
             ToTensorV2()
         ])
 
+    def _fix_name_cocoglide(self, filename: str, cnt_symbols: int):
+        # in files IDT-CocoGlide-manip.txt and IDT-CocoGlide-auth.txt
+        # filename 'teddy_bear_80413_mask.png', but in CocoGlide file with name 'teddy bear_80413_mask.png'
+        if filename.count("_") == cnt_symbols:
+            return filename.replace("_", " ", 1)
+        return filename
+
     def __getitem__(self, index):
         # ----------
         # Read image and label
         # ----------
-        with cwd(self.base_path):
-            image = cv2.cvtColor(cv2.imread(self.image_paths[index]), cv2.COLOR_BGR2RGB)
-
+        try:
+            with cwd(self.base_path):
+                image = cv2.cvtColor(cv2.imread(self._fix_name_cocoglide(self.image_paths[index], 2)), cv2.COLOR_BGR2RGB)
+        except Exception as ex:
+            print(self.image_paths[index])
+            print(ex)
         h, w, c = image.shape
         label = self.labels[index]
 
@@ -128,7 +138,7 @@ class ManipulationDataset(Dataset):
             mask = np.zeros((h, w), np.uint8)  # a totally black mask for real image
         else:
             with cwd(self.base_path):
-                mask = cv2.imread(self.mask_paths[index], cv2.IMREAD_GRAYSCALE)
+                mask = cv2.imread(self._fix_name_cocoglide(self.mask_paths[index], 3), cv2.IMREAD_GRAYSCALE)
 
 
 

@@ -5,11 +5,11 @@ in August 2023 @ ITI-CERTH
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from models.base import BaseModel
-from models.heads import SegFormerHead
-from models.layers import trunc_normal_
+from model.base import BaseModel
+from model.heads import SegFormerHead
+from model.layers import trunc_normal_
 import logging
-from models.backbones import *
+from model.backbones import *
 
 
 class WSCMNeXtWithConf(BaseModel):

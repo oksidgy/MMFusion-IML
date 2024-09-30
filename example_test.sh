@@ -3,7 +3,7 @@ exp="./experiments/ec_example.yaml"
 ckpt="./ckpt/ec_example/best_val_loss.pth"
 res="./results/ec_example/localization"
 mkdir -p $res
-$pint test_localization.py --exp $exp --ckpt $ckpt --manip $columbia_manip > $res/Columbia.txt
+$pint python3.9 test_localization.py --exp $exp --ckpt $ckpt --manip $columbia_manip > $res/Columbia.txt
 clear
 $pint test_localization.py --exp $exp --ckpt $ckpt --manip $cover_manip > $res/COVER.txt
 clear

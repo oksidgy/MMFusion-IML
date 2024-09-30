@@ -5,12 +5,12 @@ in August 2023 @ ITI-CERTH
 import torch
 from torch import nn, Tensor
 from torch.nn import functional as F
-from models.layers import DropPath
+from model.layers import DropPath
 import functools
 from functools import partial
-from models.modules.ffm import FeatureFusionModule as FFM
-from models.modules.ffm import FeatureRectifyModule as FRM
-from models.modules.ffm import ChannelEmbed
+from model.modules.ffm import FeatureFusionModule as FFM
+from model.modules.ffm import FeatureRectifyModule as FRM
+from model.modules.ffm import ChannelEmbed
 from common.utils import nchw_to_nlc, nlc_to_nchw
 
 
