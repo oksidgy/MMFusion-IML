@@ -9,6 +9,7 @@ from data.datasets import ManipulationDataset
 from model.cmnext_conf import CMNeXtWithConf
 from model.modal_extract import ModalitiesExtractor
 from configs.cmnext_init_cfg import _C as config, update_config
+from model.ws_cmnext_conf import WSCMNeXtWithConf
 
 parser = argparse.ArgumentParser(description='Infer')
 parser.add_argument('-gpu', '--gpu', type=int, default=0, help='device, use -1 for cpu')
@@ -41,7 +42,10 @@ if device != 'cpu':
 
 modal_extractor = ModalitiesExtractor(config.MODEL.MODALS[1:], config.MODEL.NP_WEIGHTS)
 
-model = CMNeXtWithConf(config.MODEL)
+if args.ckpt.endswith("early_fusion_detection.pth"):
+    model = CMNeXtWithConf(config.MODEL)
+else:
+    model = WSCMNeXtWithConf(config.MODEL)
 
 ckpt = torch.load(args.ckpt)
 

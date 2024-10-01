@@ -2,6 +2,10 @@
 Created by Kostas Triaridis (@kostino)
 in August 2023 @ ITI-CERTH
 """
+from collections import namedtuple
+from enum import Enum
+from typing import Optional
+
 import torch
 from torch.utils.data import Dataset
 import random
@@ -11,6 +15,13 @@ import numpy as np
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from contextlib import contextmanager
+
+#PreprocessingImage = namedtuple("PreprocessingImage", "type") # values: "resize", "compress", "both"
+
+class PreprocessingType(Enum):
+    resize = 1
+    compress = 2
+    both = 3
 
 
 @contextmanager
@@ -67,7 +78,7 @@ class RandomCropONJPEGGRID(A.RandomCrop):
 
 
 class ManipulationDataset(Dataset):
-    def __init__(self, path, image_size, train=False):
+    def __init__(self, path, image_size, train=False, preprocessing: Optional[PreprocessingType] = None):
         self.train = train
         self.path = path
         self.image_size = image_size
@@ -76,6 +87,7 @@ class ManipulationDataset(Dataset):
         self.base_path = './data'
         self.labels = []
         self.name = self.path.split('/')[-1].replace('.txt', '').replace('IDT-', '')
+        self.preprocessing = preprocessing
 
         self._init_transforms()
         with open(self.path, 'r') as f:
@@ -91,6 +103,7 @@ class ManipulationDataset(Dataset):
                 self.image_paths.append(image_path)
                 self.mask_paths.append(mask_path)
                 self.labels.append(int(label_str))
+        print(f"Image count = {len(self.image_paths)}")
 
     def __len__(self):
         return len(self.labels)
@@ -107,9 +120,16 @@ class ManipulationDataset(Dataset):
             A.ImageCompression(quality_lower=30, quality_upper=100, p=0.5),
         ])
 
-        self.image_transforms_final = A.Compose([
-            ToTensorV2()
-        ])
+        transforms = []
+        if self.preprocessing == PreprocessingType.compress or self.preprocessing == PreprocessingType.both:
+            transforms.append(A.ImageCompression(quality_lower=50, quality_upper=80, p=1.0))
+
+        if self.preprocessing == PreprocessingType.resize or self.preprocessing == PreprocessingType.both:
+            transforms.append(A.Downscale(scale_min=0.8, scale_max=0.8, always_apply=True, p=1.0))
+
+        transforms.append(ToTensorV2())
+        self.image_transforms_final = A.Compose(transforms)
+
 
     def _fix_name_cocoglide(self, filename: str, cnt_symbols: int):
         # in files IDT-CocoGlide-manip.txt and IDT-CocoGlide-auth.txt
@@ -125,6 +145,7 @@ class ManipulationDataset(Dataset):
         try:
             with cwd(self.base_path):
                 image = cv2.cvtColor(cv2.imread(self._fix_name_cocoglide(self.image_paths[index], 2)), cv2.COLOR_BGR2RGB)
+
         except Exception as ex:
             print(self.image_paths[index])
             print(ex)
@@ -152,6 +173,7 @@ class ManipulationDataset(Dataset):
             mask = res['mask']
 
         image = self.image_transforms_final(image=image)['image']
+
         image = image / 256.0
 
         mask = mask / 255.0
