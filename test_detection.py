@@ -67,15 +67,15 @@ preprocessing = PreprocessingType.both
 manip = ManipulationDataset(args.manip,
                             config.DATASET.IMG_SIZE,
                             train=False,
-                            preprocessing=preprocessing)
+                            preprocessing=None)
 auth = ManipulationDataset(args.auth,
                            config.DATASET.IMG_SIZE,
                            train=False,
-                           preprocessing=preprocessing)
+                           preprocessing=None)
 val = ConcatDataset([manip, auth])
 val_loader = DataLoader(val,
                         batch_size=1,
-                        shuffle=False,
+                        shuffle=True,
                         num_workers=config.WORKERS,
                         pin_memory=True)
 
@@ -85,6 +85,8 @@ times = []
 pbar = tqdm(val_loader)
 for step, (images, _, masks, lab) in enumerate(pbar):
     with torch.no_grad():
+        if step == 10:
+            break
         images = images.to(device, non_blocking=True)
         masks = masks.squeeze(1).to(device, non_blocking=True)
         lab = lab.to(device, non_blocking=True)
@@ -105,5 +107,8 @@ for step, (images, _, masks, lab) in enumerate(pbar):
         times.append(time_batch)
 
 print(f"\nTime predict (avg): {np.array(times).mean()}")
-auc, baCC = computeDetectionMetrics(scores, labels)
+auc, baCC, tn, fp, fn, tp, pr, rec, f1 = computeDetectionMetrics(scores, labels)
 print("\nAUC: {}\nbACC: {}".format(auc, baCC))
+print(f"\nTP={tp}, TN={tn}, FP={fp}, FN={fn}")
+print(f"\nManip: pre={pr[1]}, recall={rec[1]}, F1={f1[1]}")
+print(f"\nNot Manip: pre={pr[0]}, recall={rec[0]}, F1={f1[0]}")

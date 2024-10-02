@@ -122,8 +122,16 @@ def computeDetectionMetrics(scores, labels):
     AUC = roc_auc_score(lbl, scores)
 
     # Balanced Accuracy
-    from sklearn.metrics import balanced_accuracy_score
+    from sklearn.metrics import balanced_accuracy_score, confusion_matrix, precision_recall_fscore_support, ConfusionMatrixDisplay
     bACC = balanced_accuracy_score(lbl, scores > 0.5)
+    matrix = confusion_matrix(lbl, scores > 0.5, labels=[0, 1])
+    tn, fp, fn, tp = matrix.ravel()
+    disp = ConfusionMatrixDisplay(matrix, display_labels=["not_manip", "manip"])
+    disp.plot().figure_.savefig('results/confusion_matrix.png')
+    pr, rec, f1, _ = precision_recall_fscore_support(lbl, scores > 0.5, labels=[0, 1])
 
-    return AUC, bACC
+    # 0 - not manip
+    # 1 - manip
+
+    return AUC, bACC, tn, fp, fn, tp, pr, rec, f1
 
