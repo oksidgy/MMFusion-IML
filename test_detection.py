@@ -20,8 +20,8 @@ parser.add_argument('-gpu', '--gpu', type=int, default=-1, help='device, use -1 
 parser.add_argument('-log', '--log', type=str, default='INFO', help='logging level')
 parser.add_argument('-exp', '--exp', type=str, default="./experiments/ec_example_phase_earlyfusion.yaml", help='Yaml experiment file')
 parser.add_argument('-ckpt', '--ckpt', type=str, default="./ckpt/early_fusion_detection.pth", help='Checkpoint')
-parser.add_argument('-manip', '--manip', type=str, default="./data/IDT-CocoGlide-manip.txt", help='Manip data file')
-parser.add_argument('-auth', '--auth', type=str, default="./data/IDT-CocoGlide-auth.txt", help='Auth data file')
+parser.add_argument('-manip', '--manip', type=str, default="./data/IDT-DSO-1-manip.txt", help='Manip data file')
+parser.add_argument('-auth', '--auth', type=str, default="./data/IDT-DSO-1-auth.txt", help='Auth data file')
 parser.add_argument('opts', help="other options", default=None, nargs=argparse.REMAINDER)
 
 args = parser.parse_args()
@@ -62,7 +62,7 @@ model = model.to(device)
 modal_extractor.eval()
 model.eval()
 
-preprocessing = PreprocessingType.both
+preprocessing = PreprocessingType.compress
 
 manip = ManipulationDataset(args.manip,
                             config.DATASET.IMG_SIZE,
@@ -85,8 +85,6 @@ times = []
 pbar = tqdm(val_loader)
 for step, (images, _, masks, lab) in enumerate(pbar):
     with torch.no_grad():
-        if step == 10:
-            break
         images = images.to(device, non_blocking=True)
         masks = masks.squeeze(1).to(device, non_blocking=True)
         lab = lab.to(device, non_blocking=True)
