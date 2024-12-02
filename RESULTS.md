@@ -19,7 +19,6 @@ VK: приводит к качеству к (1024 по высоте для ве�
 Telegram: сжимает до 50% качества
 
 Наборы :
-
 * [CocoGlide](https://github.com/grip-unina/TruFor#cocoglide-dataset) 
 * [DSO-1](https://recodbr.wordpress.com/code-n-data/#dso1_dsi1)
 

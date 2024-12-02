@@ -12,11 +12,11 @@ from configs.cmnext_init_cfg import _C as config, update_config
 from model.ws_cmnext_conf import WSCMNeXtWithConf
 
 parser = argparse.ArgumentParser(description='Infer')
-parser.add_argument('-gpu', '--gpu', type=int, default=0, help='device, use -1 for cpu')
+parser.add_argument('-gpu', '--gpu', type=int, default=-1, help='device, use -1 for cpu')
 parser.add_argument('-log', '--log', type=str, default='INFO', help='logging level')
-parser.add_argument('-exp', '--exp', type=str, default='experiments/ec_example_phase2.yaml', help='Yaml experiment file')
+parser.add_argument('-exp', '--exp', type=str, default='experiments/ec_example_phase_earlyfusion.yaml', help='Yaml experiment file')
 parser.add_argument('-ckpt', '--ckpt', type=str, default='ckpt/early_fusion_detection.pth', help='Checkpoint')
-parser.add_argument('-path', '--path', type=str, default='example.png', help='Image path')
+parser.add_argument('-path', '--path', type=str, default='test/doc_manipsmall2.png', help='Image path')
 parser.add_argument('opts', help="other options", default=None, nargs=argparse.REMAINDER)
 
 args = parser.parse_args()
@@ -47,7 +47,7 @@ if args.ckpt.endswith("early_fusion_detection.pth"):
 else:
     model = WSCMNeXtWithConf(config.MODEL)
 
-ckpt = torch.load(args.ckpt)
+ckpt = torch.load(args.ckpt, map_location=device)
 
 model.load_state_dict(ckpt['state_dict'])
 modal_extractor.load_state_dict(ckpt['extractor_state_dict'])
@@ -57,7 +57,7 @@ model = model.to(device)
 modal_extractor.eval()
 model.eval()
 
-target = args.path.split(".")[-2] + "_mask.png"
+target = "./results/" + "_mask.png"
 
 with open('tmp_inf.txt', 'w') as f:
     f.write(args.path + ' None 0\n')

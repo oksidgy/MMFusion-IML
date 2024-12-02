@@ -86,6 +86,7 @@ pbar = tqdm(val_loader)
 for step, (images, _, masks, lab) in enumerate(pbar):
     with torch.no_grad():
         images = images.to(device, non_blocking=True)
+
         masks = masks.squeeze(1).to(device, non_blocking=True)
         lab = lab.to(device, non_blocking=True)
         modals = modal_extractor(images)
