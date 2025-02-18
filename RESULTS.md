@@ -30,3 +30,15 @@ Telegram: сжимает до 50% качества
 |---------------------------------------------------------------------|---|-------|----------------------|------|
 | [CocoGlide](https://github.com/grip-unina/TruFor#cocoglide-dataset) | 0.76041 | 0.683 | 0.552 / 0.0774       | 1024 |
 
+
+
+## Model weights
+
+* LateFusion: 610 Mb
+* EarlyFusion: 276 Mb
+
+
+## Model take place on GPU
+
+* EarlyFusion: 9 220 Mb GPU (batch_size=1)
+

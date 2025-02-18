@@ -127,6 +127,7 @@ class ManipulationDataset(Dataset):
         if self.preprocessing == PreprocessingType.resize or self.preprocessing == PreprocessingType.both:
             transforms.append(A.Downscale(scale_min=0.8, scale_max=0.8, always_apply=True, p=1.0))
 
+        transforms.append(A.PadIfNeeded(min_height=self.image_size, min_width=self.image_size, border_mode=cv2.BORDER_CONSTANT, value=127, mask_value=-1, p=1))
         transforms.append(ToTensorV2())
         self.image_transforms_final = A.Compose(transforms)
 
