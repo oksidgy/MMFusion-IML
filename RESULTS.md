@@ -1,6 +1,20 @@
 
 # Experiments
 
+test:
+```commandline
+python test_detection.py --gpu 1 --manip ./data/IDT-CocoGlide-manip.txt --auth ./data/IDT-CocoGlide-auth.txt
+```
+
+train (phase 1):
+```commandline
+python3 ec_train.py --exp ./experiments/ec_example.yaml --gpu 1
+```
+
+train (phase 2):
+```commandline
+python3 ec_train_phase2.py --exp ./experiments/ec_example_phase2.yaml --gpu 1 --ckpt ckpt/ec_example/best_val_loss.pth 
+```
 
 ## Model Detection (early_fusion):
 
